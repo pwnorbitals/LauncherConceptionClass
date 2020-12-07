@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import math as m
+import json
 
 # Constantes
 g0 = 9.80665  # m/s2 (2.pi/86164)
@@ -27,7 +28,7 @@ azimuth_deg = np.rad2deg(azimuth_rad)
 a = (Ra + Rp) / 2
 Vp = np.sqrt(mu * (2/Rp - 1/a)) * 1000
 
-Vi = Omega_e * Re * np.cos(lat_rad) * np.sin(azimuth_rad)
+Vi = Omega_e * Re * np.cos(lat_rad) * np.sin(azimuth_rad) * 1000
 losses = 2.452e-3 * Zp**2 + 1.051 * Zp + 1387.5
 
 deltaV_prop = Vp - Vi + losses
@@ -46,39 +47,47 @@ class Propellant:
         self.Isp_mean = Isp_mean
         self.k = k
 
-Ref_pet = Propellant('Refined Petroleum 1', 'LOX-RP1', [1, 2, 3], 330, 287, 0.150)
-Liq_OH = Propellant('Liquide oxygen - liquid hydrogen', 'LOX-LK2', [2,3], 440, 0, 0.22)
-Sol_liq = Propellant('Solid-liquid', 'Solid', [1], 300, 260, 0.1)
+#Ref_pet = Propellant('Refined Petroleum 1', 'LOX-RP1', [1, 2, 3], 330, 287, 0.150)
+#Liq_OH = Propellant('Liquide oxygen - liquid hydrogen', 'LOX-LK2', [2,3], 440, 0, 0.22)
+#Sol_liq = Propellant('Solid-liquid', 'Solid', [1], 300, 260, 0.1)
+
+
+Ref_pet = {'Name': 'LOX-RP1', 'Isp': 330, 'k': 0.15}
+Ref_pet_mean = {'Name': 'LOX-RP1', 'Isp': 287, 'k': 0.15}
+Liq_OH = {'Name': 'LOX-LK2', 'Isp': 440, 'k': 0.22}
+Sol_liq = {'Name': 'Solid', 'Isp': 300, 'k': 0.10}
+Sol_liq_mean = {'Name': 'Solid', 'Isp': 260, 'k': 0.10}
+
 
 # Different possible scenarii
 
 #With two stages
-two_stages_1 = [Ref_pet, Ref_pet]
-two_stages_2 = [Ref_pet, Liq_OH]
-two_stages_3 = [Sol_liq, Ref_pet]
-two_stages_4 = [Sol_liq, Liq_OH]
+two_stages_1 = [Ref_pet_mean, Ref_pet]
+two_stages_2 = [Ref_pet_mean, Liq_OH]
+two_stages_3 = [Sol_liq_mean, Ref_pet]
+two_stages_4 = [Sol_liq_mean, Liq_OH]
 
 #With three stages
-three_stages_1 = [Ref_pet, Ref_pet, Ref_pet]
-three_stages_2 = [Ref_pet, Ref_pet, Liq_OH]
-three_stages_3 = [Ref_pet, Liq_OH, Ref_pet]
-three_stages_4 = [Ref_pet, Liq_OH, Liq_OH]
-three_stages_5 = [Sol_liq, Ref_pet, Ref_pet]
-three_stages_6 = [Sol_liq, Ref_pet, Liq_OH]
-three_stages_7 = [Sol_liq, Liq_OH, Liq_OH]
-three_stages_8 = [Sol_liq, Liq_OH, Ref_pet]
+three_stages_1 = [Ref_pet_mean, Ref_pet, Ref_pet]
+three_stages_2 = [Ref_pet_mean, Ref_pet, Liq_OH]
+three_stages_3 = [Ref_pet_mean, Liq_OH, Ref_pet]
+three_stages_4 = [Ref_pet_mean, Liq_OH, Liq_OH]
+three_stages_5 = [Sol_liq_mean, Ref_pet, Ref_pet]
+three_stages_6 = [Sol_liq_mean, Ref_pet, Liq_OH]
+three_stages_7 = [Sol_liq_mean, Liq_OH, Liq_OH]
+three_stages_8 = [Sol_liq_mean, Liq_OH, Ref_pet]
 
 scenarii = [two_stages_1, two_stages_2, two_stages_3, two_stages_4, three_stages_1, three_stages_2, three_stages_3, three_stages_4, three_stages_5, three_stages_6, three_stages_7, three_stages_8]        
 
 
-def TwoStages(deltaV, Isp1, Isp2, k1, k2, b2=3, M_payload=3800):
+def TwoStages(deltaV, Isp1, Isp2, k1, k2, b2=3.5, M_payload=3800):
     g0 = 9.80665
     Omega1 = k1 / (1 + k1)
     Omega2 = k2 / (1 + k2)
     deltaV_temp = 0
     it = 0 # Counts Lagrange Multiplier methods iterations
 
-    while abs(deltaV - deltaV_temp) > 20:
+    while abs(deltaV - deltaV_temp) > 50:
         b1 = (1 / Omega1) * (1 - (Isp2 / Isp1) * (1 - Omega2 * b2))
         deltaV_1 = Isp1 * g0 * np.log(b1)
         deltaV_2 = Isp2 * g0 * np.log(b2)
@@ -105,10 +114,10 @@ def TwoStages(deltaV, Isp1, Isp2, k1, k2, b2=3, M_payload=3800):
 
     Mtot = Mi1 + Mi2 + M_payload
 
-    return deltaV_temp, Mi1, Mi2, Me1, Me2, Ms1, Ms2, Mtot, it
+    return deltaV_temp, Mi1, Mi2, Me1, Me2, Ms1, Ms2, Mtot, b1, b2, it
 
 
-def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=1, M_payload=3800):
+def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=2, M_payload=3800):
     g0 = 9.80665
     Omega1 = k1 / (1 + k1)
     Omega2 = k2 / (1 + k2)
@@ -116,7 +125,7 @@ def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=1, M_payload=3800):
     deltaV_temp = 0
     it = 0 # Counts Lagrange multiplier methods iterations
 
-    while abs(deltaV - deltaV_temp) > 60:
+    while abs(deltaV - deltaV_temp) > 100:
         b2 = (1 / Omega2) * (1 - (Isp3 / Isp2) * (1 - Omega3 * b3))
         b1 = (1 / Omega1) * (1 - (Isp2 / Isp1) * (1 - Omega2 * b2))
         deltaV_1 = Isp1 * g0 * np.log(b1)
@@ -149,7 +158,7 @@ def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=1, M_payload=3800):
 
     Mtot = Mi1 + Mi2 + Mi3 + M_payload
 
-    return deltaV_temp, Mi1, Mi2, Mi3, Me1, Me2, Me3, Ms1, Ms2, Ms3, Mtot, it
+    return deltaV_temp, Mi1, Mi2, Mi3, Me1, Me2, Me3, Ms1, Ms2, Ms3, Mtot, b1, b2, b3, it
 
 def Checks(Ms, Mi, M_payload):
     """
@@ -195,38 +204,40 @@ def Test(scenarii):
     for i, scenario in enumerate(scenarii):
         current_masses = []
         if len(scenario) == 2: # Two stages scenario
-            Isp1 = scenario[0].Isp_mean
-            Isp2 = scenario[1].Ispv
-            k1 = scenario[0].k
-            k2 = scenario[1].k
+            Isp1 = scenario[0].get('Isp')
+            Isp2 = scenario[1].get('Isp')
+            k1 = scenario[0].get('k')
+            k2 = scenario[1].get('k')
 
 
             current_masses = TwoStages(deltaV_prop, Isp1, Isp2, k1, k2)
-            deltaV_True, Mi1, Mi2, Me1, Me2, Ms1, Ms2, Mtot, it = current_masses
+            deltaV_True, Mi1, Mi2, Me1, Me2, Ms1, Ms2, Mtot, b1, b2, it = current_masses
             
             Mi = [Mi1, Mi2] # Mass lists for specifications tests.
             Ms = [Ms1, Ms2]
         
         else:   # Three stages scenario
-            Isp1 = scenario[0].Isp_mean
-            Isp2 = scenario[1].Ispv
-            Isp3 = scenario[2].Ispv
-            k1 = scenario[0].k
-            k2 = scenario[1].k
-            k3 = scenario[2].k
+            Isp1 = scenario[0].get('Isp')
+            Isp2 = scenario[1].get('Isp')
+            Isp3 = scenario[2].get('Isp')
+            k1 = scenario[0].get('k')
+            k2 = scenario[1].get('k')
+            k3 = scenario[2].get('k')
             
             current_masses = ThreeStages(deltaV_prop, Isp1, Isp2, Isp3, k1, k2, k3)
-            deltaV_temp, Mi1, Mi2, Mi3, Me1, Me2, Me3, Ms1, Ms2, Ms3, Mtot, it = current_masses
+            deltaV_temp, Mi1, Mi2, Mi3, Me1, Me2, Me3, Ms1, Ms2, Ms3, Mtot, b1, b2, b3, it = current_masses
             
             Mi = [Mi1, Mi2, Mi3] # Mass lists for specifications tests.
             Ms = [Ms1, Ms2, Ms3]
             print("\n#-----------\nScenario n°", i, " :\nNumber of iterations : ", it)
         results.append((Checks(Ms, Mi, M_payload), current_masses))
         i += 1
-
-    print("Accepted scenarios : ", [(i, scenarii[i], val[1]) for i,val in enumerate(results) if val[0] is True])
+    names = ['deltaV', 'Mi1', 'Mi2', 'Mi3', 'Me1', 'Me2', 'Me3', 'Ms1', 'Ms2', 'Ms3', 'Mtot', 'b1', 'b2', 'b3', 'it']
+    print("Accepted scenarios : ")
+    for i, val in enumerate(results):
+        if val[0] is True:
+            print(i, scenarii[i], [(names[j], val[1][j]) for j in range(len(names))])
 
 
 # Test if the specifications are respected for each mass propellant scenario
 Test(scenarii)
-print("Scenar 1 : ", two_stages_1)
