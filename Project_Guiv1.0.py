@@ -159,39 +159,50 @@ def Checks(Ms, Mi, M_payload):
         print("\nStage 1 min and max structural mass : CHECK")
     else:
         print("\nStage 1 min and max structural mass : NOT RESPECTED\nStage 1 structural mass : ", Ms[0], "\nSpecifications : 500 < Ms1 < 100 000 kg.")
+        return False
     if 200 < Ms[1] < 80000: # Second stage mass check
         print("\nStage 2 min and max structural mass : CHECK")
     else:
         print("\nStage 2 min and max structural mass : NOT RESPECTED\nStage 2 structural mass : ", Ms[1], "\nSpecifications : 200 < Ms2 < 80 000 kg.")
+        return False
     if len(Ms) > 2: # Third stage mass check
         if 200 < Ms[2] < 50000:
             print("\nStage 3 min and max structural mass : CHECK")
         else:
             print("\nStage 3 min and max structural mass : NOT RESPECTED\nStage 3 structural mass : ", Ms[2], "\nSpecifications : 200 < Ms3 < 50 000 kg.")
+            return False
     
     if len(Mi) > 2: # First stage mass equilibrium check
         if (Mi[0] > Mi[1] + Mi[2] + M_payload):
             print("\nFirst stage mass bigger than the mass of the rest of the launcher : CHECK")
         else:
             print("\nFirst stage mass bigger than the mass of the rest of the launcher : NOT RESPECTED")
+            return False
         if (Mi[1] > Mi[2] + M_payload):
             print("\nMass of stage 2 bigger than the mass of the rest of the launcher : CHECK")
         else:
             print("\nMass of stage 2 bigger than the mass of the rest of the launcher : NOT RESPECTED")
+            return False
     else:
         if (Mi[0] > Mi[1] + M_payload):
             print("\nFirst stage mass bigger than the mass of the rest of the launcher : CHECK")
 
+    return True
+
 
 def Test(scenarii):
+    results = []
     for i, scenario in enumerate(scenarii):
+        current_masses = []
         if len(scenario) == 2: # Two stages scenario
             Isp1 = scenario[0].Isp_mean
             Isp2 = scenario[1].Ispv
             k1 = scenario[0].k
             k2 = scenario[1].k
-            
-            deltaV_true, Mi1, Mi2, Me1, Me2, Ms1, Ms2, Mtot, it = TwoStages(deltaV_prop, Isp1, Isp2, k1, k2)
+
+
+            current_masses = TwoStages(deltaV_prop, Isp1, Isp2, k1, k2)
+            deltaV_True, Mi1, Mi2, Me1, Me2, Ms1, Ms2, Mtot, it = current_masses
             
             Mi = [Mi1, Mi2] # Mass lists for specifications tests.
             Ms = [Ms1, Ms2]
@@ -204,13 +215,16 @@ def Test(scenarii):
             k2 = scenario[1].k
             k3 = scenario[2].k
             
-            deltaV_temp, Mi1, Mi2, Mi3, Me1, Me2, Me3, Ms1, Ms2, Ms3, Mtot, it = ThreeStages(deltaV_prop, Isp1, Isp2, Isp3, k1, k2, k3)
+            current_masses = ThreeStages(deltaV_prop, Isp1, Isp2, Isp3, k1, k2, k3)
+            deltaV_temp, Mi1, Mi2, Mi3, Me1, Me2, Me3, Ms1, Ms2, Ms3, Mtot, it = current_masses
             
             Mi = [Mi1, Mi2, Mi3] # Mass lists for specifications tests.
             Ms = [Ms1, Ms2, Ms3]
-        print("\n#-----------\nScenario n°", i, " :\nNumber of iterations : ", it)
-        Checks(Ms, Mi, M_payload)
+            print("\n#-----------\nScenario n°", i, " :\nNumber of iterations : ", it)
+        results.append((Checks(Ms, Mi, M_payload), current_masses))
         i += 1
+
+    print("Accepted scenarios : ", [(i, scenarii[i], val[1]) for i,val in enumerate(results) if val[0] is True])
 
 
 # Test if the specifications are respected for each mass propellant scenario
