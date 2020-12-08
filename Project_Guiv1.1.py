@@ -53,9 +53,11 @@ Sol_liq = Propellant('Solid-liquid', 'Solid', [1], 300, 260, 0.1)
 propellants = [Ref_pet, Liq_OH, Sol_liq]
 
 # Different possible scenarii
-two_stages = [(prop1, prop2) for prop1 in propellants for prop2 in propellants]
-three_stages = [(prop1, prop2, prop3) for prop1 in propellants for prop2 in propellants for prop3 in propellants]
-scenarii =  two_stages + three_stages
+two_stages = [(prop1, prop2) if prop1 != Liq_OH and prop2 != Sol_liq  else () 
+                    for prop1 in propellants for prop2 in propellants]
+three_stages = [(prop1, prop2, prop3) if prop1 != Liq_OH and prop2 != Sol_liq and prop3 != Sol_liq else () 
+                    for prop1 in propellants for prop2 in propellants for prop3 in propellants]
+scenarii =  list(filter(None, two_stages + three_stages))
 
 
 def NStages(n, deltaV, Isp, k, bn=1, M_payload=3800, threshold = 60, step = 0.05, itmax = 2000):
