@@ -35,7 +35,7 @@ deltaV_prop = Vp - Vi + losses
 # Parameters
 
 
-def TwoStages(deltaV, Isp1, Isp2, k1, k2, b2=3, M_payload=3800):
+def TwoStages(deltaV, Isp1, Isp2, k1, k2, b2=3, step=0.05, M_payload=3800):
     g0 = 9.80665
     Omega1 = k1 / (1 + k1)
     Omega2 = k2 / (1 + k2)
@@ -46,7 +46,11 @@ def TwoStages(deltaV, Isp1, Isp2, k1, k2, b2=3, M_payload=3800):
         deltaV_1 = Isp1 * g0 * np.log(b1)
         deltaV_2 = Isp2 * g0 * np.log(b2)
         deltaV_temp = deltaV_1 + deltaV_2
-        b2 += 0.05
+
+        if deltaV_temp > deltaV :
+            b2 += step
+        else :
+            b2 -= step
 
     a1 = (1 + k1) / b1 - k1
     a2 = (1 + k2) / b2 - k2
@@ -63,7 +67,7 @@ def TwoStages(deltaV, Isp1, Isp2, k1, k2, b2=3, M_payload=3800):
     return deltaV_temp, Mi1, Mi2, Me1, Me2, Ms1, Ms2
 
 
-def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=1, M_payload=3800):
+def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=1, step=0.05, M_payload=3800):
     g0 = 9.80665
     Omega1 = k1 / (1 + k1)
     Omega2 = k2 / (1 + k2)
@@ -77,7 +81,11 @@ def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=1, M_payload=3800):
         deltaV_2 = Isp2 * g0 * np.log(b2)
         deltaV_3 = Isp3 * g0 * np.log(b3)
         deltaV_temp = deltaV_1 + deltaV_2 + deltaV_3
-        b3 += 0.05
+         
+        if deltaV_temp > deltaV :
+            b3 += step
+        else :
+            b3 -= step
 
     a1 = (1 + k1) / b1 - k1
     a2 = (1 + k2) / b2 - k2
@@ -97,3 +105,38 @@ def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=1, M_payload=3800):
 
     return deltaV_temp, Mi1, Mi2, Mi3, Me1, Me2, Me3, Ms1, Ms2, Ms3
 
+
+def NStages(n, deltaV, Isps, ks, bn=1, step=0.05, M_payload=3800):
+    g0 = 9.80665
+    omegas = [k[i] / (1+k[i]) for i in range(n)]
+    deltaV_temp = 0
+
+    while abs(deltaV - deltaV_temp) > 10:
+        bs = [(1 / omegas[i]) * (1 - (Isps[i+1]/Isps[i]) * (1 - Omegas[i+1] * bs[i+1])) if i!= n else bn for i in range(n-1, 0) ]
+        deltaV_1 = Isp1 * g0 * np.log(b1)
+        deltaV_2 = Isp2 * g0 * np.log(b2)
+        deltaV_3 = Isp3 * g0 * np.log(b3)
+        deltaV_temp = deltaV_1 + deltaV_2 + deltaV_3
+         
+        if deltaV_temp > deltaV :
+            b3 += step
+        else :
+            b3 -= step
+
+    a1 = (1 + k1) / b1 - k1
+    a2 = (1 + k2) / b2 - k2
+    a3 = (1 + k3) / b3 - k3
+
+    Mi3 = M_payload / a3
+    Mi2 = Mi3 / a2
+    Mi1 = Mi2 / a1
+
+    Me3 = (1 + a3) / (1 + k3) * Mi3
+    Me2 = (1 + a2) / (1 + k2) * Mi2
+    Me1 = (1 + a1) / (1 + k1) * Mi1
+
+    Ms3 = k3 * Me3
+    Ms2 = k2 * Me2
+    Ms1 = k1 * Me1
+
+    return deltaV_temp, Mi1, Mi2, Mi3, Me1, Me2, Me3, Ms1, Ms2, Ms3

@@ -11,13 +11,15 @@ mu = 398600.5  # km3/s2
 
 # Data
 Zp = 200  # km
-Rp = Re + Zp
 Za = 35786  # km
-Ra = Re + Za
 inc_deg = 5.2  # deg
-inc_rad = np.deg2rad(inc_deg)
 M_payload = 3800  # kg
 lat_deg = 5.2  # deg
+
+
+Rp = Re + Zp
+Ra = Re + Za
+inc_rad = np.deg2rad(inc_deg)
 lat_rad = np.deg2rad(lat_deg)
 
 
