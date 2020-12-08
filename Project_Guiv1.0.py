@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math as m
 import json
+np.set_printoptions(precision=2, suppress=True)
+
 
 # Constantes
 g0 = 9.80665  # m/s2 (2.pi/86164)
@@ -11,15 +13,13 @@ mu = 398600.5  # km3/s2
 
 # Data
 Zp = 200  # km
+Rp = Re + Zp
 Za = 35786  # km
+Ra = Re + Za
 inc_deg = 5.2  # deg
+inc_rad = np.deg2rad(inc_deg)
 M_payload = 3800  # kg
 lat_deg = 5.2  # deg
-
-
-Rp = Re + Zp
-Ra = Re + Za
-inc_rad = np.deg2rad(inc_deg)
 lat_rad = np.deg2rad(lat_deg)
 
 
@@ -82,14 +82,14 @@ three_stages_8 = [Sol_liq_mean, Liq_OH, Ref_pet]
 scenarii = [two_stages_1, two_stages_2, two_stages_3, two_stages_4, three_stages_1, three_stages_2, three_stages_3, three_stages_4, three_stages_5, three_stages_6, three_stages_7, three_stages_8]        
 
 
-def TwoStages(deltaV, Isp1, Isp2, k1, k2, b2=3.5, M_payload=3800):
+def TwoStages(deltaV, Isp1, Isp2, k1, k2, b2=3.0, M_payload=3800):
     g0 = 9.80665
     Omega1 = k1 / (1 + k1)
     Omega2 = k2 / (1 + k2)
     deltaV_temp = 0
     it = 0 # Counts Lagrange Multiplier methods iterations
 
-    while abs(deltaV - deltaV_temp) > 50:
+    while deltaV - deltaV_temp > 50:
         b1 = (1 / Omega1) * (1 - (Isp2 / Isp1) * (1 - Omega2 * b2))
         deltaV_1 = Isp1 * g0 * np.log(b1)
         deltaV_2 = Isp2 * g0 * np.log(b2)
@@ -98,9 +98,9 @@ def TwoStages(deltaV, Isp1, Isp2, k1, k2, b2=3.5, M_payload=3800):
         #print("abs(deltaV - deltaV_temp) : ", abs(deltaV - deltaV_temp))
 
         if deltaV_temp < deltaV:
-            b2 += 0.05
+            b2 += 0.01
         else:
-            b2 -= 0.05
+            b2 -= 0.01
 
     a1 = (1 + k1) / b1 - k1
     a2 = (1 + k2) / b2 - k2
@@ -108,8 +108,8 @@ def TwoStages(deltaV, Isp1, Isp2, k1, k2, b2=3.5, M_payload=3800):
     Mi2 = M_payload / a2
     Mi1 = Mi2 / a1
 
-    Me2 = (1 + a2) / (1 + k2) * Mi2
-    Me1 = (1 + a1) / (1 + k1) * Mi1
+    Me2 = (1 - a2) / (1 + k2) * Mi2
+    Me1 = (1 - a1) / (1 + k1) * Mi1
 
     Ms2 = k2 * Me2
     Ms1 = k1 * Me1
@@ -119,7 +119,7 @@ def TwoStages(deltaV, Isp1, Isp2, k1, k2, b2=3.5, M_payload=3800):
     return deltaV_temp, Mi1, Mi2, Me1, Me2, Ms1, Ms2, Mtot, b1, b2, it
 
 
-def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=2, M_payload=3800):
+def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=3, M_payload=3800):
     g0 = 9.80665
     Omega1 = k1 / (1 + k1)
     Omega2 = k2 / (1 + k2)
@@ -127,7 +127,7 @@ def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=2, M_payload=3800):
     deltaV_temp = 0
     it = 0 # Counts Lagrange multiplier methods iterations
 
-    while abs(deltaV - deltaV_temp) > 100:
+    while deltaV - deltaV_temp > 0.1:
         b2 = (1 / Omega2) * (1 - (Isp3 / Isp2) * (1 - Omega3 * b3))
         b1 = (1 / Omega1) * (1 - (Isp2 / Isp1) * (1 - Omega2 * b2))
         deltaV_1 = Isp1 * g0 * np.log(b1)
@@ -138,9 +138,9 @@ def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=2, M_payload=3800):
         #print("abs(deltaV - deltaV_temp) : ", abs(deltaV - deltaV_temp))
 
         if deltaV_temp < deltaV:
-            b3 += 0.05
+            b3 += 0.00002
         else:
-            b3 -= 0.05
+            b3 -= 0.00002
 
     a1 = (1 + k1) / b1 - k1
     a2 = (1 + k2) / b2 - k2
@@ -150,9 +150,9 @@ def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=2, M_payload=3800):
     Mi2 = Mi3 / a2
     Mi1 = Mi2 / a1
 
-    Me3 = (1 + a3) / (1 + k3) * Mi3
-    Me2 = (1 + a2) / (1 + k2) * Mi2
-    Me1 = (1 + a1) / (1 + k1) * Mi1
+    Me3 = (1 - a3) / (1 + k3) * Mi3
+    Me2 = (1 - a2) / (1 + k2) * Mi2
+    Me1 = (1 - a1) / (1 + k1) * Mi1
 
     Ms3 = k3 * Me3
     Ms2 = k2 * Me2
@@ -161,6 +161,7 @@ def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=2, M_payload=3800):
     Mtot = Mi1 + Mi2 + Mi3 + M_payload
 
     return deltaV_temp, Mi1, Mi2, Mi3, Me1, Me2, Me3, Ms1, Ms2, Ms3, Mtot, b1, b2, b3, it
+
 
 def Checks(Ms, Mi, M_payload):
     """
@@ -241,5 +242,8 @@ def Test(scenarii):
             print(i, scenarii[i], [(names[j], val[1][j]) for j in range(len(names))])
 
 
+
 # Test if the specifications are respected for each mass propellant scenario
 Test(scenarii)
+print('Necessary deltaV:', deltaV_prop)
+print(azimuth_deg)

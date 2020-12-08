@@ -70,7 +70,7 @@ def NStages(n, deltaV, Isp, k, bn=1, M_payload=3800, threshold = 60, step = 0.05
     deltaV_current = 0
     it = 0 # Counts Lagrange multiplier methods iterations
 
-    while abs(deltaV_prop - deltaV_current) > threshold:
+    while abs(deltaV - deltaV_current) > threshold:
         bj_prec = lambda j, bj : (1 / Omega[j]) * (1 - (Isp[j+1] / Isp[j]) * (1 -(Omega[j] * bj)))
 
         b = []
