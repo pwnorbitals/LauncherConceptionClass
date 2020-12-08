@@ -113,28 +113,34 @@ def Checks(Ms, Mi, M_payload):
         print("\nStage 1 min and max structural mass : CHECK")
     else:
         print("\nStage 1 min and max structural mass : NOT RESPECTED\nStage 1 structural mass : ", Ms[0], "\nSpecifications : 500 < Ms1 < 100 000 kg.")
+        return False
     if 200 < Ms[1] < 80000: # Second stage mass check
         print("\nStage 2 min and max structural mass : CHECK")
     else:
         print("\nStage 2 min and max structural mass : NOT RESPECTED\nStage 2 structural mass : ", Ms[1], "\nSpecifications : 200 < Ms2 < 80 000 kg.")
+        return False
     if len(Ms) > 2: # Third stage mass check
         if 200 < Ms[2] < 50000:
             print("\nStage 3 min and max structural mass : CHECK")
         else:
             print("\nStage 3 min and max structural mass : NOT RESPECTED\nStage 3 structural mass : ", Ms[2], "\nSpecifications : 200 < Ms3 < 50 000 kg.")
-    
+            return False
     if len(Mi) > 2: # First stage mass equilibrium check
         if (Mi[0] > Mi[1] + Mi[2] + M_payload):
             print("\nFirst stage mass bigger than the mass of the rest of the launcher : CHECK")
         else:
             print("\nFirst stage mass bigger than the mass of the rest of the launcher : NOT RESPECTED")
+            return False
         if (Mi[1] > Mi[2] + M_payload):
             print("\nMass of stage 2 bigger than the mass of the rest of the launcher : CHECK")
         else:
             print("\nMass of stage 2 bigger than the mass of the rest of the launcher : NOT RESPECTED")
+            return False
     else:
         if (Mi[0] > Mi[1] + M_payload):
             print("\nFirst stage mass bigger than the mass of the rest of the launcher : CHECK")
+
+    return True
 
 
 def Test(scenarii):
@@ -144,7 +150,7 @@ def Test(scenarii):
         k = np.array([prop.k for prop in scenario])
         deltaV, Mi, Me, Ms, Mtot, it = NStages(len(scenario), deltaV_prop, Isp, k)
 
-        print("\n#-----------\nScenario n°", i, " :\nNumber of iterations : ", it)
+        print("\n#-----------\nScenario n°", i, " : ",[prop.code for prop in scenario],"\nNumber of iterations : ", it)
         print("\nTotal mass : Mtot = ", Mtot)
         print("Total stage masses : Mi = ", Mi)
         print("Structural masses : Ms = ", Ms)
