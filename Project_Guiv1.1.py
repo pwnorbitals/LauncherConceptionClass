@@ -152,6 +152,44 @@ def ThreeStages(deltaV, Isp1, Isp2, Isp3, k1, k2, k3, b3=1, M_payload=3800):
 
     return deltaV_temp, Mi1, Mi2, Mi3, Me1, Me2, Me3, Ms1, Ms2, Ms3, Mtot, it
 
+
+def NStages(n, deltaV, Isp, k, bn=1, M_payload=3800, threshold, step):
+
+    assert(len(Isp) == n)
+    assert(len(k) == n)
+
+    g0 = 9.80665
+    Omega = k / (1 + k)
+    deltaV_temp = 0
+    it = 0 # Counts Lagrange multiplier methods iterations
+
+    while abs(deltaV - deltaV_temp) > 60:
+        bj_prec = lambda j, bj : (1 / Omega[j]) * (1 - (Isp[j+1] / Isp[j]) * (1 -(Omega[j] * bj)))
+        b = [bj_prec(i, b[i-1]) if i != 0 else bn for i in range(n)].reverse()
+
+        deltaV = Isp * g0 * np.log(b)
+        deltaV_temp = np.sum(deltaV)
+        it += 1
+        #print("abs(deltaV - deltaV_temp) : ", abs(deltaV - deltaV_temp))
+
+        if deltaV_temp < deltaV:
+            b3 += step
+        else:
+            b3 -= step
+
+
+    a = ((1 + k) / b) - k
+
+    Mi = [Mi[i-1] / a[i] if i != 0 else M_payload for i in range(n+1)].reverse()
+    Me = (1 + a) / (1 + k) * Mi
+    Ms = k * Me
+    Mtot = np.sum(Mi)
+
+    return deltaV_temp, Mi, M, Ms, Mtot, it
+
+
+    
+
 def Checks(Ms, Mi, M_payload):
     """
     Small functions that checks if the mass specifications are respected
