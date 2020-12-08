@@ -148,7 +148,7 @@ def Checks(Ms, Mi, M_payload):
 def Test(scenarii):
     for i, scenario in enumerate(scenarii):
 
-        Isp = np.array([prop.Isp_mean for prop in scenario])
+        Isp = np.array([prop.Isp_mean if i == 0 else prop.Ispv for i,prop in enumerate(scenario)])
         k = np.array([prop.k for prop in scenario])
         deltaV, Mi, Me, Ms, Mtot, it = NStages(len(scenario), deltaV_prop, Isp, k)
 
