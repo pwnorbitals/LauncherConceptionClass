@@ -58,7 +58,7 @@ three_stages = [(prop1, prop2, prop3) for prop1 in propellants for prop2 in prop
 scenarii =  two_stages + three_stages
 
 
-def NStages(n, deltaV, Isp, k, bn=1, M_payload=3800, threshold = 60, step = 0.05):
+def NStages(n, deltaV, Isp, k, bn=1, M_payload=3800, threshold = 60, step = 0.05, itmax = 2000):
 
     assert(len(Isp) == n)
     assert(len(k) == n)
@@ -83,6 +83,9 @@ def NStages(n, deltaV, Isp, k, bn=1, M_payload=3800, threshold = 60, step = 0.05
         #print("abs(deltaV - deltaV_temp) : ", abs(deltaV - deltaV_temp))
 
         bn += step if deltaV_current < deltaV_prop else -step
+        if it > itmax :
+            print("Iteration limit reached") 
+            break
 
 
     a = ((1 + k) / b) - k
@@ -93,7 +96,7 @@ def NStages(n, deltaV, Isp, k, bn=1, M_payload=3800, threshold = 60, step = 0.05
     Mi.reverse()
     Mi = np.array(Mi)
 
-    Me = (1 + a) / (1 + k) * Mi[:n-1]
+    Me = ((1 + a) / (1 + k)) * Mi[:n]
     Ms = k * Me
     Mtot = np.sum(Mi)
 
