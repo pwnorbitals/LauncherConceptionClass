@@ -60,7 +60,7 @@ three_stages = [(prop1, prop2, prop3) if prop1 != Liq_OH and prop2 != Sol_liq an
 scenarii =  list(filter(None, two_stages + three_stages))
 
 
-def NStages(n, deltaV, Isp, k, bn=1, M_payload=3800, threshold = 60, step = 0.05, itmax = 2000):
+def NStages(n, deltaV, Isp, k, bn=5, M_payload=3800, threshold = 0.1, step = 0.00001, itmax = 1000000):
 
     assert(len(Isp) == n)
     assert(len(k) == n)
@@ -70,39 +70,36 @@ def NStages(n, deltaV, Isp, k, bn=1, M_payload=3800, threshold = 60, step = 0.05
     deltaV_current = 0
     it = 0 # Counts Lagrange multiplier methods iterations
 
-    while abs(deltaV - deltaV_current) > threshold:
-        bj_prec = lambda j, bj : (1 / Omega[j]) * (1 - (Isp[j+1] / Isp[j]) * (1 -(Omega[j] * bj)))
+    while abs(deltaV_prop - deltaV_current) > threshold:
+        
 
-        b = []
-        for i in range(n):
-            b.append(bj_prec((n-1)-i, b[i-1]) if i != 0 else bn)
-        b.reverse()
-        b = np.array(b)
-
-        deltaV = Isp * g0 * np.log(b)
-        deltaV_current = np.sum(deltaV)
+        b = np.zeros((n,)); b[n-1] = bn
+        for j in range(n-2, -1, -1):
+            b[j] =  (1 / Omega[j]) * (1 - ((Isp[j+1] / Isp[j]) * (1 - (Omega[j] * b[j+1]))))
+            if b[j] < 0:
+                raise RuntimeError("negative b")
+ 
+        deltaVs = Isp * g0 * np.log(b)
+        deltaV_current = np.sum(deltaVs)
         it += 1
         #print("abs(deltaV - deltaV_temp) : ", abs(deltaV - deltaV_temp))
 
         bn += step if deltaV_current < deltaV_prop else -step
         if it > itmax :
-            print("Iteration limit reached") 
-            break
+            raise RuntimeError("iterations limit")
 
 
     a = ((1 + k) / b) - k
 
-    Mi = []
-    for i in range(n+1):
-        Mi.append(Mi[i-1] / a[n-i] if i != 0 else M_payload)
-    Mi.reverse()
-    Mi = np.array(Mi)
+    Mi = np.zeros((n+1,)); Mi[n] = M_payload
+    for j in range(n-1, -1, -1):
+        Mi[j] = Mi[j+1] / a[j]
 
-    Me = ((1 + a) / (1 + k)) * Mi[:n]
+    Me = ((1 - a) / (1 + k)) * Mi[:n]
     Ms = k * Me
     Mtot = np.sum(Mi)
 
-    return deltaV_current, Mi, Me, Ms, Mtot, it
+    return deltaV_current, Mi, Me, Ms, Mtot, it, b, a, Omega
 
 
     
@@ -123,24 +120,24 @@ def Checks(Ms, Mi, M_payload):
         return False
     if len(Ms) > 2: # Third stage mass check
         if 200 < Ms[2] < 50000:
-            print("\nStage 3 min and max structural mass : CHECK")
+            print("Stage 3 min and max structural mass : CHECK")
         else:
-            print("\nStage 3 min and max structural mass : NOT RESPECTED\nStage 3 structural mass : ", Ms[2], "\nSpecifications : 200 < Ms3 < 50 000 kg.")
+            print("Stage 3 min and max structural mass : NOT RESPECTED\nStage 3 structural mass : ", Ms[2], "\nSpecifications : 200 < Ms3 < 50 000 kg.")
             return False
     if len(Mi) > 2: # First stage mass equilibrium check
         if (Mi[0] > Mi[1] + Mi[2] + M_payload):
-            print("\nFirst stage mass bigger than the mass of the rest of the launcher : CHECK")
+            print("First stage mass bigger than the mass of the rest of the launcher : CHECK")
         else:
-            print("\nFirst stage mass bigger than the mass of the rest of the launcher : NOT RESPECTED")
+            print("First stage mass bigger than the mass of the rest of the launcher : NOT RESPECTED")
             return False
         if (Mi[1] > Mi[2] + M_payload):
-            print("\nMass of stage 2 bigger than the mass of the rest of the launcher : CHECK")
+            print("Mass of stage 2 bigger than the mass of the rest of the launcher : CHECK")
         else:
-            print("\nMass of stage 2 bigger than the mass of the rest of the launcher : NOT RESPECTED")
+            print("Mass of stage 2 bigger than the mass of the rest of the launcher : NOT RESPECTED")
             return False
     else:
         if (Mi[0] > Mi[1] + M_payload):
-            print("\nFirst stage mass bigger than the mass of the rest of the launcher : CHECK")
+            print("First stage mass bigger than the mass of the rest of the launcher : CHECK")
 
     return True
 
@@ -148,12 +145,22 @@ def Checks(Ms, Mi, M_payload):
 def Test(scenarii):
     for i, scenario in enumerate(scenarii):
 
-        Isp = np.array([prop.Isp_mean for prop in scenario])
+        Isp = np.array([prop.Isp_mean if i == 0 else prop.Ispv for i,prop in enumerate(scenario)])
         k = np.array([prop.k for prop in scenario])
-        deltaV, Mi, Me, Ms, Mtot, it = NStages(len(scenario), deltaV_prop, Isp, k)
+
+        try:
+            deltaV, Mi, Me, Ms, Mtot, it, b, a, Omega = NStages(len(scenario), deltaV_prop, Isp, k)
+        except RuntimeError as e :
+            print("Scenario", i, "failed :", str(e))
+            continue
+                
 
         print("\n#-----------\nScenario n°", i, " : ",[prop.code for prop in scenario],"\nNumber of iterations : ", it)
-        print("\nTotal mass : Mtot = ", Mtot)
+        print("Exact dV : deltaV = ", deltaV)
+        print("B coeffs : b = ", b)
+        print("A coeffs : a = ", a)
+        print("Omega coeffs : Omega = ", Omega)
+        print("Total mass : Mtot = ", Mtot)
         print("Total stage masses : Mi = ", Mi)
         print("Structural masses : Ms = ", Ms)
         print("Propellant masses : Me = ", Me)
