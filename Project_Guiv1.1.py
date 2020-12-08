@@ -156,6 +156,7 @@ def Test(scenarii):
                 
 
         print("\n#-----------\nScenario n°", i, " : ",[prop.code for prop in scenario],"\nNumber of iterations : ", it)
+        print("Exact dV : deltaV = ", deltaV)
         print("B coeffs : b = ", b)
         print("A coeffs : a = ", a)
         print("Omega coeffs : Omega = ", Omega)
