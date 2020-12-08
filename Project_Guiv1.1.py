@@ -60,7 +60,7 @@ three_stages = [(prop1, prop2, prop3) if prop1 != Liq_OH and prop2 != Sol_liq an
 scenarii =  list(filter(None, two_stages + three_stages))
 
 
-def NStages(n, deltaV, Isp, k, bn=5, M_payload=3800, threshold = 0.1, step = 0.00001, itmax = 1000000):
+def NStages(n, deltaV, Isp, k, bn=10, M_payload=3800, threshold = 0.1, step = 0.00001, itmax = 1000000):
 
     assert(len(Isp) == n)
     assert(len(k) == n)
@@ -76,8 +76,8 @@ def NStages(n, deltaV, Isp, k, bn=5, M_payload=3800, threshold = 0.1, step = 0.0
         b = np.zeros((n,)); b[n-1] = bn
         for j in range(n-2, -1, -1):
             b[j] =  (1 / Omega[j]) * (1 - ((Isp[j+1] / Isp[j]) * (1 - (Omega[j] * b[j+1]))))
-            if b[j] < 0:
-                raise RuntimeError("negative b")
+            if b[j] < 1:
+                raise RuntimeError("b < 1")
  
         deltaVs = Isp * g0 * np.log(b)
         deltaV_current = np.sum(deltaVs)
@@ -151,7 +151,7 @@ def Test(scenarii):
         try:
             deltaV, Mi, Me, Ms, Mtot, it, b, a, Omega = NStages(len(scenario), deltaV_prop, Isp, k)
         except RuntimeError as e :
-            print("Scenario", i, "failed :", str(e))
+            print("\n#-----------\nScenario n°", i, " : ",[prop.code for prop in scenario],"\nFailed : ", str(e))
             continue
                 
 
