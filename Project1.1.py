@@ -40,12 +40,8 @@ print("Vp = ", Vp, "\nVi = ", Vi, "\nLosses = ", losses, "\ndeltaV_prop = ", del
 # Propellants
 class Propellant:
     def __init__(self, name, code, possible_stages, Ispv, Isp_mean, k):
-        self.name = name
-        self.code = code
-        self.possible_stages = possible_stages
-        self.Ispv = Ispv
-        self.Isp_mean = Isp_mean
-        self.k = k
+        self.name = name; self.code = code; self.possible_stages = possible_stages
+        self.Ispv = Ispv; self.Isp_mean = Isp_mean; self.k = k
 
 Ref_pet = Propellant('Refined Petroleum 1', 'LOX-RP1', [1, 2, 3], 330, 287, 0.150)
 Liq_OH = Propellant('Liquide oxygen - liquid hydrogen', 'LOX-LK2', [2,3], 440, 0, 0.22)
@@ -75,9 +71,9 @@ def NStages(n, deltaV, Isp, k, bn=10, M_payload=3800, threshold = 0.1, step = 0.
 
         b = np.zeros((n,)); b[n-1] = bn
         for j in range(n-2, -1, -1):
-            b[j] =  (1 / Omega[j]) * (1 - ((Isp[j+1] / Isp[j]) * (1 - (Omega[j] * b[j+1]))))
+            b[j] =  (1 / Omega[j]) * (1 - ((Isp[j+1] / Isp[j]) * (1 - (Omega[j+1] * b[j+1]))))
             if b[j] < 1:
-                raise RuntimeError("b < 1")
+                raise RuntimeError("b"+str(j)+" < 1")
  
         deltaVs = Isp * g0 * np.log(b)
         deltaV_current = np.sum(deltaVs)
@@ -113,17 +109,23 @@ def Checks(Ms, Mi, M_payload):
     else:
         print("\nStage 1 min and max structural mass : NOT RESPECTED\nStage 1 structural mass : ", Ms[0], "\nSpecifications : 500 < Ms1 < 100 000 kg.")
         return False
+
+
     if 200 < Ms[1] < 80000: # Second stage mass check
         print("\nStage 2 min and max structural mass : CHECK")
     else:
         print("\nStage 2 min and max structural mass : NOT RESPECTED\nStage 2 structural mass : ", Ms[1], "\nSpecifications : 200 < Ms2 < 80 000 kg.")
         return False
+
+
     if len(Ms) > 2: # Third stage mass check
         if 200 < Ms[2] < 50000:
             print("Stage 3 min and max structural mass : CHECK")
         else:
             print("Stage 3 min and max structural mass : NOT RESPECTED\nStage 3 structural mass : ", Ms[2], "\nSpecifications : 200 < Ms3 < 50 000 kg.")
             return False
+
+
     if len(Mi) > 2: # First stage mass equilibrium check
         if (Mi[0] > Mi[1] + Mi[2] + M_payload):
             print("First stage mass bigger than the mass of the rest of the launcher : CHECK")
@@ -139,6 +141,7 @@ def Checks(Ms, Mi, M_payload):
         if (Mi[0] > Mi[1] + M_payload):
             print("First stage mass bigger than the mass of the rest of the launcher : CHECK")
 
+
     return True
 
 
@@ -148,14 +151,15 @@ def Test(scenarii):
         Isp = np.array([prop.Isp_mean if i == 0 else prop.Ispv for i,prop in enumerate(scenario)])
         k = np.array([prop.k for prop in scenario])
 
+        print("\n#-----------\nScenario n°", i, " : ",[prop.code for prop in scenario])
         try:
             deltaV, Mi, Me, Ms, Mtot, it, b, a, Omega = NStages(len(scenario), deltaV_prop, Isp, k)
         except RuntimeError as e :
-            print("\n#-----------\nScenario n°", i, " : ",[prop.code for prop in scenario],"\nFailed : ", str(e))
+            print("Failed : ", str(e))
             continue
                 
 
-        print("\n#-----------\nScenario n°", i, " : ",[prop.code for prop in scenario],"\nNumber of iterations : ", it)
+        print("Number of iterations : ", it)
         print("Exact dV : deltaV = ", deltaV)
         print("B coeffs : b = ", b)
         print("A coeffs : a = ", a)
